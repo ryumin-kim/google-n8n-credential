@@ -17,7 +17,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "https://<your-render-url>.onrender.com/auth/google/callback",  // Render의 콜백 URL
+      callbackURL: "https://google-n8n-credential.onrender.com/auth/google/callback",  // Render의 콜백 URL
     },
     (accessToken, refreshToken, profile, done) => {
       // 로그인한 사용자 정보 저장 (예: DB에 저장)
