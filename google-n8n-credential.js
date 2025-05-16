@@ -1,47 +1,45 @@
+const { google } = require('googleapis');
 const fetch = require('node-fetch');
-const dotenv = require('dotenv');
-dotenv.config();
 
-// n8n의 크레덴셜 생성 API 호출
-async function createCredential(n8nUrl, apiKey, credentialName, credentialType, apiKeyDetails) {
-  try {
-    const cleanedUrl = n8nUrl.replace(/\/+$/, "");  // n8n URL 정리
-    const response = await fetch(`${cleanedUrl}/api/v1/credentials`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-N8N-API-KEY': apiKey,
-      },
-      body: JSON.stringify({
-        name: credentialName,
-        type: credentialType,
-        nodesAccess: [],
-        data: apiKeyDetails, // 구글 OAuth 2.0을 통해 받은 데이터 (예: Access Token)
-      }),
-    });
+// Google OAuth2 클라이언트 설정
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  'https://your-redirect-url.com/auth/google/callback' // 리디렉션 URL
+);
 
-    const data = await response.json();
+const generateCredentialForN8n = async (token) => {
+  const response = await fetch('https://n8n-instance-url.com/api/v1/credentials', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-N8N-API-KEY': process.env.N8N_API_KEY,
+    },
+    body: JSON.stringify({
+      name: 'Google OAuth Credential',
+      type: 'google',
+      nodesAccess: [],
+      data: { 
+        accessToken: token.access_token,
+        refreshToken: token.refresh_token,
+        scope: token.scope,
+        tokenType: token.token_type
+      }
+    })
+  });
 
-    if (response.ok) {
-      console.log('Credential created successfully:', data);
-    } else {
-      console.error('Error creating credential:', data);
-    }
-  } catch (err) {
-    console.error('Error:', err);
-  }
-}
-
-// 예시로 사용할 데이터 (실제 데이터로 바꿔야 함)
-const n8nUrl = 'https://your-n8n-instance-url.com';
-const apiKey = 'your-n8n-api-key';
-const credentialName = 'Google API Credential';
-const credentialType = 'OAuth2';
-const apiKeyDetails = {
-  clientId: 'your-client-id',
-  clientSecret: 'your-client-secret',
-  accessToken: 'your-access-token',
-  refreshToken: 'your-refresh-token',
+  return response.json();
 };
 
-createCredential(n8nUrl, apiKey, credentialName, credentialType, apiKeyDetails);
+// 구글 로그인 후 callback
+const getGoogleOAuthTokens = (code) => {
+  return oauth2Client.getToken(code)
+    .then(tokens => {
+      return generateCredentialForN8n(tokens);
+    })
+    .catch(error => {
+      console.error('Error in token generation:', error);
+    });
+};
+
+module.exports = { getGoogleOAuthTokens };
