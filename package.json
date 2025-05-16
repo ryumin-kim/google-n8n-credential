@@ -1,14 +1,17 @@
 {
-  "name": "session-example",
+  "name": "google-n8n-credential",
   "version": "1.0.0",
-  "description": "An Express server with session management",
+  "description": "Google OAuth2 login and create n8n credentials",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.17.1",
-    "express-session": "^1.17.2",
-    "dotenv": "^8.2.0"
+    "passport": "^0.4.1",
+    "passport-google-oauth20": "^2.0.0",
+    "dotenv": "^8.2.0",
+    "express-session": "^1.17.1",
+    "node-fetch": "^2.6.1"
   }
 }
