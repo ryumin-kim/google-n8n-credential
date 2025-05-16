@@ -1,15 +1,14 @@
 {
-  "name": "google-oauth-n8n",
+  "name": "session-example",
   "version": "1.0.0",
-  "description": "n8n 구글 OAuth2 인증 예시",
+  "description": "An Express server with session management",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.17.1",
-    "passport": "^0.4.1",
-    "passport-google-oauth20": "^2.0.0",
-    "dotenv": "^10.0.0"
+    "express-session": "^1.17.2",
+    "dotenv": "^8.2.0"
   }
 }
