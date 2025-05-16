@@ -1,0 +1,17 @@
+{
+  "name": "google-oauth2-n8n",
+  "version": "1.0.0",
+  "description": "n8n Google OAuth2 Integration",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "googleapis": "^39.2.0",
+    "node-fetch": "^2.6.1",
+    "dotenv": "^8.2.0"
+  },
+  "author": "Your Name",
+  "license": "MIT"
+}
