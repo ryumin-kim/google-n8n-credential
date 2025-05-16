@@ -1,16 +1,18 @@
 {
-  "name": "google-oauth2-n8n",
+  "name": "google-n8n-credentials",
   "version": "1.0.0",
-  "description": "n8n Google OAuth2 Integration",
+  "description": "Google OAuth to create n8n credentials",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.17.1",
-    "googleapis": "^39.2.0",
+    "passport": "^0.5.0",
+    "passport-google-oauth20": "^2.0.0",
+    "dotenv": "^10.0.0",
     "node-fetch": "^2.6.1",
-    "dotenv": "^8.2.0"
+    "cors": "^2.8.5"
   },
   "author": "Your Name",
   "license": "MIT"
