@@ -49,7 +49,6 @@ app.get('/auth/google/callback', passport.authenticate('google', { failureRedire
     .then(response => {
   res.send(`
     <script>
-      window.opener.postMessage('google-login-success', 'https://your-frontend.com');
       window.close();
     </script>
   `);
