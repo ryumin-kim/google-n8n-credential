@@ -47,8 +47,13 @@ app.get('/auth/google/callback', passport.authenticate('google', { failureRedire
   const code = req.query.code;
   getGoogleOAuthTokens(code)  // 인증 후 받은 코드로 토큰을 받아서 n8n 크레덴셜을 생성
     .then(response => {
-      res.json({ message: 'Google login successful', data: response });
-    })
+  res.send(`
+    <script>
+      window.opener.postMessage('google-login-success', 'https://your-frontend.com');
+      window.close();
+    </script>
+  `);
+})
     .catch(error => {
       res.status(500).json({ error: 'Failed to create n8n credentials', details: error });
     });
