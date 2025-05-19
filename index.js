@@ -1,7 +1,6 @@
-// server.js or index.js (entry point for Render server)
 const express = require('express');
-const passport = require('passport');
 const session = require('express-session');
+const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const dotenv = require('dotenv');
 const { getGoogleOAuthTokens } = require('./google-n8n-credential');
@@ -22,9 +21,12 @@ passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: process.env.GOOGLE_REDIRECT_URI,
-}, (accessToken, refreshToken, profile, done) => {
-  console.log('Google Profile:', profile);
-  return done(null, profile);
+  passReqToCallback: true,
+}, (req, accessToken, refreshToken, profile, done) => {
+  return done(null, {
+    profile,
+    query: req.session.queryParams, // 전달받은 user_id, credential_type
+  });
 }));
 
 passport.serializeUser((user, done) => done(null, user));
@@ -33,29 +35,43 @@ passport.deserializeUser((obj, done) => done(null, obj));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Step 1: Trigger OAuth
-app.get('/auth/google', passport.authenticate('google', {
-  scope: ['profile', 'email'],
-}));
+// Step 1: Trigger Google OAuth, store user info in session
+app.get('/auth/google', (req, res, next) => {
+  const { user_id, credential_type } = req.query;
 
-// Step 2: Callback and pass result to front
+  if (!user_id || !credential_type) {
+    return res.status(400).send('Missing user_id or credential_type');
+  }
+
+  // save query for callback
+  req.session.queryParams = { user_id, credential_type };
+  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
+
+// Step 2: Google OAuth callback
 app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), async (req, res) => {
   const code = req.query.code;
+  const { user_id, credential_type } = req.user.query;
+
   try {
-    const tokens = await getGoogleOAuthTokens(code);
-    console.log('✅ Tokens received:', tokens);
-    res.send(`
-      <script>
-        window.opener.postMessage('google-login-success', 'https://supersimpleseo.net');
-        window.close();
-      </script>
-    `);
+    const result = await getGoogleOAuthTokens(code, user_id, credential_type);
+
+    if (result.success) {
+      return res.send(`
+        <script>
+          window.opener.postMessage('google-login-success', 'https://supersimpleseo.net');
+          window.close();
+        </script>
+      `);
+    } else {
+      return res.status(500).json({ error: 'Token fetch failed', details: result.error });
+    }
   } catch (err) {
-    console.error('❌ Token fetch failed:', err);
-    res.status(500).json({ error: 'Token fetch failed', details: err.message });
+    console.error('❌ OAuth Callback Error:', err);
+    res.status(500).json({ error: 'OAuth Callback Failed', details: err.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ OAuth Server running on port ${PORT}`);
+  console.log(`✅ OAuth server running on port ${PORT}`);
 });
