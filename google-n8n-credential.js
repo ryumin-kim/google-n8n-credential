@@ -1,61 +1,21 @@
-// server.js or index.js (entry point for Render server)
-const express = require('express');
-const passport = require('passport');
-const session = require('express-session');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const dotenv = require('dotenv');
-const { getGoogleOAuthTokens } = require('./google-n8n-credential');
+const { google } = require('googleapis');
 
-dotenv.config();
+// Google OAuth2 클라이언트 설정
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
 
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-app.use(express.json());
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: true,
-}));
-
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.GOOGLE_REDIRECT_URI,
-}, (accessToken, refreshToken, profile, done) => {
-  console.log('Google Profile:', profile);
-  return done(null, profile);
-}));
-
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Step 1: Trigger OAuth
-app.get('/auth/google', passport.authenticate('google', {
-  scope: ['profile', 'email'],
-}));
-
-// Step 2: Callback and pass result to front
-app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), async (req, res) => {
-  const code = req.query.code;
+// code → token 발급
+const getGoogleOAuthTokens = async (code) => {
   try {
-    const tokens = await getGoogleOAuthTokens(code);
-    console.log('✅ Tokens received:', tokens);
-    res.send(`
-      <script>
-        window.opener.postMessage('google-login-success', 'https://supersimpleseo.net');
-        window.close();
-      </script>
-    `);
+    const { tokens } = await oauth2Client.getToken(code);
+    return tokens;
   } catch (err) {
-    console.error('❌ Token fetch failed:', err);
-    res.status(500).json({ error: 'Token fetch failed', details: err.message });
+    console.error('❌ Error getting Google OAuth tokens:', err);
+    throw err;
   }
-});
+};
 
-app.listen(PORT, () => {
-  console.log(`✅ OAuth Server running on port ${PORT}`);
-});
+module.exports = { getGoogleOAuthTokens };
