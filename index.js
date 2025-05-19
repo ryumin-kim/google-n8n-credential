@@ -1,9 +1,10 @@
+// server.js or index.js (entry point for Render server)
 const express = require('express');
 const passport = require('passport');
+const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const dotenv = require('dotenv');
-const session = require('express-session');
-const { getGoogleOAuthTokens } = require('./google-n8n-credential'); // 구글 인증 처리 모듈
+const { getGoogleOAuthTokens } = require('./google-n8n-credential');
 
 dotenv.config();
 
@@ -20,44 +21,41 @@ app.use(session({
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'https://google-n8n-credential.onrender.com/auth/google/callback',
+  callbackURL: process.env.GOOGLE_REDIRECT_URI,
 }, (accessToken, refreshToken, profile, done) => {
   console.log('Google Profile:', profile);
-  done(null, profile);
+  return done(null, profile);
 }));
 
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-
-passport.deserializeUser((user, done) => {
-  done(null, user);
-});
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-// 구글 로그인 요청
+// Step 1: Trigger OAuth
 app.get('/auth/google', passport.authenticate('google', {
   scope: ['profile', 'email'],
 }));
 
-// 구글 로그인 후 콜백
-app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
+// Step 2: Callback and pass result to front
+app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), async (req, res) => {
   const code = req.query.code;
-  getGoogleOAuthTokens(code)  // 인증 후 받은 코드로 토큰을 받아서 n8n 크레덴셜을 생성
-    .then(response => {
-  res.send(`
-    <script>
-      window.close();
-    </script>
-  `);
-})
-    .catch(error => {
-      res.status(500).json({ error: 'Failed to create n8n credentials', details: error });
-    });
+  try {
+    const tokens = await getGoogleOAuthTokens(code);
+    console.log('✅ Tokens received:', tokens);
+    res.send(`
+      <script>
+        window.opener.postMessage('google-login-success', 'https://supersimpleseo.net');
+        window.close();
+      </script>
+    `);
+  } catch (err) {
+    console.error('❌ Token fetch failed:', err);
+    res.status(500).json({ error: 'Token fetch failed', details: err.message });
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ OAuth Server running on port ${PORT}`);
 });
